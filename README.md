@@ -1,6 +1,6 @@
 # Repo2Prompt
 
-A tool that uses LLM to help you intelligently filter and extract relevant code from Git repositories based on natural language queries.
+🔍 A backend service that helps you find the exact code you need from any Git repository using natural language queries, and transforms the filtered content into prompt-friendly format for LLMs.
 
 > This project is inspired by and heavily references [GitIngest](https://github.com/cyclotruc/gitingest). While maintaining the core concept of repository content extraction, I've made three main changes:
 > 1. Added Large Language Models for natural language understanding
@@ -24,12 +24,40 @@ A tool that uses LLM to help you intelligently filter and extract relevant code 
 
 The project is built using a state machine workflow powered by LangGraph, consisting of the following nodes:
 
-1. **Clone Node**: Repository cloning and initial setup
-2. **Tree Node**: Repository structure analysis
-3. **Route Node**: Query-based workflow routing
-4. **Filter Node**: LLM-based code filtering rules generation
-5. **Process Node**: Content filtering and extraction
-6. **Cleanup Node**: Resource management
+```mermaid
+%%{init: {'flowchart': {'curve': 'linear'}}}%%
+graph TD;
+    __start__([<p>Start</p>]):::first
+    fetch_repo(Fetch Repository Content)
+    analyze_structure(Analyze Code Structure)
+    check_query(Check User Query)
+    generate_filters(Generate LLM-Based Filters)
+    extract_content(Extract Relevant Code)
+    cleanup(Cleanup Resources)
+    __end__([<p>End</p>]):::last
+
+    __start__ --> fetch_repo;
+    fetch_repo --> analyze_structure;
+    analyze_structure --> check_query;
+    check_query -. Has natural language query .-> generate_filters;
+    check_query -. Has predefined filters .-> extract_content;
+    generate_filters --> extract_content;
+    extract_content --> cleanup;
+    cleanup --> __end__;
+
+    classDef default fill:#f2f0ff,line-height:1.2
+    classDef first fill-opacity:0
+    classDef last fill:#bfb6fc
+```
+
+Each node serves a specific purpose:
+
+1. **Fetch Repository Content**: Clone and prepare the target repository
+2. **Analyze Code Structure**: Scan and understand the repository structure
+3. **Check User Query**: Determine if natural language processing is needed
+4. **Generate LLM-Based Filters**: Convert natural language to code filters
+5. **Extract Relevant Code**: Apply filters and extract matching content
+6. **Cleanup Resources**: Clean up temporary files and resources
 
 ## 🛠️ Tech Stack
 
@@ -85,7 +113,7 @@ cd repo2prompt
 
 2. Install development dependencies
 ```bash
-pip install -r requirements-dev.txt
+pip install -r requirements.txt
 ```
 
 3. Set up environment variables
