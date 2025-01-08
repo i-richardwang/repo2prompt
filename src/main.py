@@ -21,14 +21,14 @@ from .nodes.cleanup import cleanup_node
 
 from langgraph.graph import StateGraph, START, END
 
-# 配置日志
+# Configure logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
 
-# 加载环境变量
+# Load environment variables
 project_root = Path(__file__).parent.parent
 env_path = project_root / ".env"
 load_dotenv(env_path)
@@ -38,7 +38,7 @@ app = FastAPI(
     version=API_VERSION
 )
 
-# 配置 CORS
+# Configure CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
@@ -48,25 +48,25 @@ app.add_middleware(
 )
 
 def build_graph() -> StateGraph:
-    # 创建图构建器
+    # Create graph builder
     builder = StateGraph(State)
     
-    # 添加所有节点，使用更具描述性的节点名
+    # Add all nodes with more descriptive names
     builder.add_node("clone_repo", clone_node)
-    builder.add_node("scan_tree", tree_node)  # 改为 scan_tree
+    builder.add_node("scan_tree", tree_node)  # Changed to scan_tree
     builder.add_node("route_task", route_node)
     builder.add_node("generate_pattern", pattern_node)
     builder.add_node("process_content", process_node)
     builder.add_node("cleanup_resources", cleanup_node)
     
-    # 设置入口
+    # Set entry point
     builder.add_edge(START, "clone_repo")
     
-    # 设置主要处理流程
+    # Set main processing flow
     builder.add_edge("clone_repo", "scan_tree")
     builder.add_edge("scan_tree", "route_task")
     
-    # 添加条件边
+    # Add conditional edges
     builder.add_conditional_edges(
         "route_task",
         determine_next_node,
@@ -76,23 +76,23 @@ def build_graph() -> StateGraph:
         }
     )
     
-    # 模式生成后继续处理
+    # Continue processing after pattern generation
     builder.add_edge("generate_pattern", "process_content")
     
-    # 处理完成后清理
+    # Clean up after processing
     builder.add_edge("process_content", "cleanup_resources")
     
-    # 清理完成后结束
+    # End after cleanup
     builder.add_edge("cleanup_resources", END)
     
     return builder.compile()
 
-# 创建图实例
+# Create graph instance
 GRAPH = build_graph()
 
 def _prepare_initial_state(request: RepoRequest) -> dict:
-    """准备初始状态。"""
-    # 生成唯一的 ID 和本地路径
+    """Prepare initial state."""
+    # Generate unique ID and local path
     _id = str(uuid.uuid4())
     repo_name = os.path.basename(request.url.rstrip('/')).replace('.git', '')
     local_path = str(Path(TMP_BASE_PATH) / _id / repo_name)
@@ -103,46 +103,46 @@ def _prepare_initial_state(request: RepoRequest) -> dict:
         "pattern_type": request.pattern_type,
         "patterns": request.pattern.split(',') if request.pattern else [],
         "user_query": request.query,
-        "messages": [],  # LLM 交互消息列表
-        "paths_to_clean": [],  # 待清理路径列表
-        "should_generate_patterns": False,  # 路由标志位
-        "local_path": local_path,  # 添加本地路径
-        "repo_name": repo_name,  # 添加仓库名称以便后续使用
+        "messages": [],  # LLM interaction message history
+        "paths_to_clean": [],  # Paths to clean up
+        "should_generate_patterns": False,  # Routing flag
+        "local_path": local_path,  # Add local path
+        "repo_name": repo_name,  # Add repo name for later use
     }
 
 @app.post("/api/analyze", response_model=RepoResponse)
 async def analyze_repository(request: RepoRequest):
-    """分析仓库内容的 API 端点。
+    """API endpoint for analyzing repository content.
     
     Args:
-        request: 包含仓库 URL 和分析参数的请求对象
+        request: Request object containing repository URL and analysis parameters
 
     Returns:
-        RepoResponse: 分析结果
+        RepoResponse: Analysis results
         
     Raises:
-        HTTPException: 处理过程中的错误
+        HTTPException: Errors during processing
     """
     try:
         logger.info(f"Starting repository analysis: {request.url}")
         
-        # 准备初始状态
+        # Prepare initial state
         initial_state = _prepare_initial_state(request)
         
-        # 如果有用户查询，添加到消息历史
+        # If there's a user query, add it to message history
         if request.query:
             initial_state["messages"].append(
                 HumanMessage(content=request.query)
             )
         
-        # 执行图
+        # Execute graph
         try:
             final_state = await GRAPH.ainvoke(initial_state)
         except Exception as e:
             logger.error(f"Graph execution failed: {str(e)}")
             raise ValueError(f"Failed to process repository: {str(e)}")
         
-        # 构建响应
+        # Build response
         response = RepoResponse(
             summary=final_state["summary"],
             tree=final_state["tree"],

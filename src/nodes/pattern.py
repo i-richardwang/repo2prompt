@@ -11,29 +11,29 @@ from ..llm_tools import init_language_model
 logger = logging.getLogger(__name__)
 
 SYSTEM_PROMPT = """
-作为一个Git仓库分析专家，你需要帮助用户根据其需求生成合适的文件匹配模式。请遵循以下规则：
+As a Git repository analysis expert, you need to help users generate appropriate file matching patterns based on their requirements. Please follow these rules:
 
-1. 根据用户需求选择更合适的方式：
-   - 如果用户想要查看特定部分内容，使用 "include" 模式更简单
-   - 如果用户想要排除某些内容，使用 "exclude" 模式更合适
-   - 选择能用最少规则实现用户需求的方式
+1. Choose the more suitable approach based on user needs:
+   - Use "include" mode when users want to view specific content
+   - Use "exclude" mode when users want to exclude certain content
+   - Choose the approach that requires the fewest rules to meet user needs
 
-2. 生成符合glob模式的匹配规则，可以包含：
-   - 文件名匹配：如 *.py, *.js
-   - 目录匹配：如 tests/*, docs/*
-   - 具体路径匹配：如 src/main.py
+2. Generate glob patterns that can include:
+   - File name matching: e.g., *.py, *.js
+   - Directory matching: e.g., tests/*, docs/*
+   - Specific path matching: e.g., src/main.py
 
-3. 规则说明：
-   - 只能使用字母、数字、下划线(_)、短横线(-)、点(.)、斜杠(/)、加号(+)和星号(*)
-   - 目录匹配需要以 /* 结尾
-   - 不要使用 ** 或其他高级glob语法
+3. Pattern rules:
+   - Only use letters, numbers, underscore(_), hyphen(-), dot(.), slash(/), plus(+), and asterisk(*)
+   - Directory matching must end with /*
+   - Do not use ** or other advanced glob syntax
 
-4. 需要同时考虑：
-   - 用户的具体需求
-   - 项目的目录结构
-   - 常见的开发规范和最佳实践
+4. Consider:
+   - User's specific requirements
+   - Project directory structure
+   - Common development standards and best practices
 
-请务必选择最简单有效的方式来满足用户需求。
+Please choose the simplest effective approach to meet user requirements.
 
 Output your answer as a JSON object that conforms to the following schema:
 {schema}
@@ -46,17 +46,17 @@ Important instructions:
 """
 
 USER_PROMPT = """
-项目目录结构：
+Project directory structure:
 {tree}
 
-用户需求：
+User requirements:
 {query}
 
-请根据用户需求和项目结构生成相应的文件匹配模式。
+Please generate appropriate file matching patterns based on user requirements and project structure.
 """
 
 class PatternGenerator:
-    """使用LLM生成文件匹配模式的工具类。"""
+    """A tool class that uses LLM to generate file matching patterns."""
     
     def __init__(self):
         self.model = init_language_model(provider="siliconcloud", model_name="Qwen/Qwen2.5-72B-Instruct")
@@ -69,14 +69,14 @@ class PatternGenerator:
         self.chain = self.prompt | self.model | self.parser
     
     async def generate(self, tree: str, query: str) -> PatternGeneratorResult:
-        """生成文件匹配模式。
+        """Generate file matching patterns.
 
         Args:
-            tree: 项目目录结构
-            query: 用户的自然语言查询
+            tree: Project directory structure
+            query: User's natural language query
 
         Returns:
-            PatternGeneratorResult: 生成的模式结果
+            PatternGeneratorResult: Generated pattern result
         """
         try:
             result = await self.chain.ainvoke({
@@ -90,7 +90,7 @@ class PatternGenerator:
 
 
 async def pattern_node(state: State) -> Dict[str, Any]:
-    """模式生成节点。"""
+    """Pattern generation node."""
     try:
         if not state.get("should_generate_patterns"):
             return {}
@@ -100,7 +100,7 @@ async def pattern_node(state: State) -> Dict[str, Any]:
             tree=state["tree"],
             query=state["user_query"]
         )
-        # result 是一个字典，使用字典访问方式
+        # result is a dictionary, use dictionary access method
         logger.info(f"Generated patterns: {result['patterns']}")
 
         return {

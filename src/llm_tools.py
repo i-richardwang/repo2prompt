@@ -7,7 +7,7 @@ from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import JsonOutputParser
 
-# 配置日志
+# Configure logging
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
 )
@@ -21,19 +21,19 @@ def init_language_model(
     **kwargs: Any,
 ) -> ChatOpenAI:
     """
-    初始化语言模型，支持OpenAI模型和其他模型供应商。
+    Initialize language model, supporting OpenAI and other model providers.
 
     Args:
-        temperature: 模型输出的温度，控制随机性。默认为0.0。
-        provider: 可选的模型供应商，优先于环境变量。
-        model_name: 可选的模型名称，优先于环境变量。
-        **kwargs: 其他可选参数，将传递给模型初始化。
+        temperature: Model output temperature, controls randomness. Default is 0.0.
+        provider: Optional model provider, overrides environment variable.
+        model_name: Optional model name, overrides environment variable.
+        **kwargs: Additional optional parameters passed to model initialization.
 
     Returns:
-        初始化后的语言模型实例。
+        Initialized language model instance.
 
     Raises:
-        ValueError: 当提供的参数无效或缺少必要的配置时抛出。
+        ValueError: When provided parameters are invalid or required configuration is missing.
     """
     provider = (
         provider.lower() if provider else os.getenv("LLM_PROVIDER", "openai").lower()
@@ -48,7 +48,7 @@ def init_language_model(
 
     if not openai_api_key or not openai_api_base:
         raise ValueError(
-            f"无法找到 {provider} 的 API 密钥或基础 URL。请检查环境变量设置。"
+            f"Could not find API key or base URL for {provider}. Please check environment variables."
         )
 
     model_params = {
@@ -64,36 +64,36 @@ def init_language_model(
 
 class LanguageModelChain:
     """
-    语言模型链，用于处理输入并生成符合指定模式的输出。
+    Language model chain for processing input and generating output conforming to specified schema.
 
     Attributes:
-        model_cls: Pydantic 模型类，定义输出的结构。
-        parser: JSON 输出解析器。
-        prompt_template: 聊天提示模板。
-        chain: 完整的处理链。
+        model_cls: Pydantic model class defining output structure.
+        parser: JSON output parser.
+        prompt_template: Chat prompt template.
+        chain: Complete processing chain.
     """
 
     def __init__(
         self, model_cls: Type[BaseModel], sys_msg: str, user_msg: str, model: Any
     ):
         """
-        初始化 LanguageModelChain 实例。
+        Initialize a LanguageModelChain instance.
 
         Args:
-            model_cls: Pydantic 模型类，定义输出的结构。
-            sys_msg: 系统消息。
-            user_msg: 用户消息。
-            model: 语言模型实例。
+            model_cls: Pydantic model class defining output structure.
+            sys_msg: System message.
+            user_msg: User message.
+            model: Language model instance.
 
         Raises:
-            ValueError: 当提供的参数无效时抛出。
+            ValueError: When provided parameters are invalid.
         """
         if not issubclass(model_cls, BaseModel):
-            raise ValueError("model_cls 必须是 Pydantic BaseModel 的子类")
+            raise ValueError("model_cls must be a subclass of Pydantic BaseModel")
         if not isinstance(sys_msg, str) or not isinstance(user_msg, str):
-            raise ValueError("sys_msg 和 user_msg 必须是字符串类型")
+            raise ValueError("sys_msg and user_msg must be strings")
         if not callable(model):
-            raise ValueError("model 必须是可调用对象")
+            raise ValueError("model must be a callable object")
 
         self.model_cls = model_cls
         self.parser = JsonOutputParser(pydantic_object=model_cls)
@@ -122,9 +122,9 @@ Important instructions:
 
     def __call__(self) -> Any:
         """
-        调用处理链。
+        Call the processing chain.
 
         Returns:
-            处理链的输出。
+            Output from the processing chain.
         """
         return self.chain

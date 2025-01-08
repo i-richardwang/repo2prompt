@@ -7,25 +7,25 @@ from ..schemas import State
 from ..config import DEFAULT_MAX_FILE_SIZE
 
 async def process_node(state: State) -> Dict[str, Any]:
-    """内容处理节点。
+    """Content processing node.
     
-    职责：
-    1. 提取并过滤文件内容
-    2. 生成文件内容摘要
-    3. 估算 token 数量
-    4. 生成最终的处理报告
+    Responsibilities:
+    1. Extract and filter file contents
+    2. Generate file content summary
+    3. Estimate token count
+    4. Generate final processing report
     
     Args:
-        state: 当前图状态
+        state: Current graph state
 
     Returns:
-        dict: 包含处理结果的状态更新
+        dict: State update containing processing results
     """
     try:
         max_file_size = state.get("max_file_size", DEFAULT_MAX_FILE_SIZE)
         scan_result = state["scan_result"]
         
-        # 提取文件内容
+        # Extract file contents
         files = await _extract_files_content(
             scan_result,
             state.get("patterns", []),
@@ -33,13 +33,13 @@ async def process_node(state: State) -> Dict[str, Any]:
             max_file_size
         )
         
-        # 生成内容字符串
+        # Generate content string
         content = _create_file_content_string(files)
         
-        # 生成摘要
+        # Generate summary
         summary = _create_summary_string(scan_result, state)
         
-        # 估算 token 数量
+        # Estimate token count
         formatted_tokens = _generate_token_string(content)
         if formatted_tokens:
             summary += f"\nEstimated tokens: {formatted_tokens}"
@@ -60,7 +60,7 @@ async def _extract_files_content(
     base_path: Optional[str] = None,
     files: Optional[List[Dict[str, Any]]] = None
 ) -> List[Dict[str, Any]]:
-    """递归提取文件内容。"""
+    """Recursively extract file contents."""
     if files is None:
         files = []
     if base_path is None:
@@ -70,7 +70,7 @@ async def _extract_files_content(
         file_path = node["path"]
         rel_path = os.path.relpath(file_path, base_path)
         
-        # 应用过滤模式
+        # Apply filter patterns
         should_process = _should_process(rel_path, patterns, pattern_type)
         if not should_process:
             return files
@@ -100,7 +100,7 @@ async def _extract_files_content(
     return files
 
 def _create_file_content_string(files: List[Dict[str, Any]]) -> str:
-    """创建格式化的文件内容字符串。"""
+    """Create formatted file content string."""
     output = ""
     separator = "=" * 48 + "\n"
 
@@ -117,24 +117,24 @@ def _create_file_content_string(files: List[Dict[str, Any]]) -> str:
 
 
 def _create_summary_string(node: Dict[str, Any], state: Dict[str, Any]) -> str:
-    """创建仓库摘要字符串。"""
+    """Create repository summary string."""
     parts = []
 
-    # 仓库信息
+    # Repository information
     repo_name = state.get("repo_name", os.path.basename(state["local_path"]))
     parts.append(f"Repository: {repo_name}")
 
-    # 文件统计
+    # File statistics
     parts.append(f"Files analyzed: {node['file_count']}")
 
-    # 过滤模式信息
+    # Filter pattern information
     if state.get("generated_patterns"):
         pattern_result = state["generated_patterns"]
-        parts.append(f"Pattern type: {pattern_result['pattern_type']}")  # 修改这里
+        parts.append(f"Pattern type: {pattern_result['pattern_type']}")
         parts.append("Applied patterns:")
-        for pattern in pattern_result['patterns']:  # 修改这里
+        for pattern in pattern_result['patterns']:
             parts.append(f"  - {pattern}")
-        parts.append(f"Explanation: {pattern_result['explanation']}")  # 修改这里
+        parts.append(f"Explanation: {pattern_result['explanation']}")
     elif state.get("patterns"):
         parts.append(f"Pattern type: {state['pattern_type']}")
         parts.append("Applied patterns:")
@@ -144,7 +144,7 @@ def _create_summary_string(node: Dict[str, Any], state: Dict[str, Any]) -> str:
     return "\n".join(parts)
 
 def _generate_token_string(context_string: str) -> Optional[str]:
-    """估算并格式化token数量。"""
+    """Estimate and format token count."""
     try:
         encoding = tiktoken.get_encoding("cl100k_base")
         total_tokens = len(encoding.encode(context_string, disallowed_special=()))
@@ -160,7 +160,7 @@ def _generate_token_string(context_string: str) -> Optional[str]:
         return None
 
 def _should_process(path: str, patterns: List[str], pattern_type: str) -> bool:
-    """判断是否应处理该文件。"""
+    """Determine if the file should be processed."""
     from fnmatch import fnmatch
     
     if not patterns:
@@ -170,7 +170,7 @@ def _should_process(path: str, patterns: List[str], pattern_type: str) -> bool:
     return matches if pattern_type == "include" else not matches
 
 def _is_text_file(file_path: str) -> bool:
-    """判断是否为文本文件。"""
+    """Determine if the file is a text file."""
     try:
         with open(file_path, "rb") as file:
             chunk = file.read(1024)
@@ -179,7 +179,7 @@ def _is_text_file(file_path: str) -> bool:
         return False
 
 def _read_file_content(file_path: str) -> str:
-    """读取文件内容。"""
+    """Read file content."""
     try:
         with open(file_path, encoding="utf-8", errors="ignore") as f:
             return f.read()

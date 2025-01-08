@@ -3,19 +3,19 @@ from typing import Literal
 from ..schemas import State
 
 async def route_node(state: State) -> dict:
-    """路由判断节点。
+    """Routing decision node.
     
-    职责：
-    1. 检查用户是否提供了自然语言查询
-    2. 设置 should_generate_patterns 标志
+    Responsibilities:
+    1. Check if user provided a natural language query
+    2. Set should_generate_patterns flag
     
     Args:
-        state: 当前图状态
+        state: Current graph state
 
     Returns:
-        dict: 包含更新的 should_generate_patterns 标志
+        dict: Contains updated should_generate_patterns flag
     """
-    # 检查是否有用户查询
+    # Check if there's a user query
     has_query = bool(state.get("user_query"))
     
     return {
@@ -23,16 +23,16 @@ async def route_node(state: State) -> dict:
     }
 
 def determine_next_node(state: State) -> Literal["pattern", "process"]:
-    """根据状态判断下一个节点。
+    """Determine the next node based on state.
     
-    用于 StateGraph 的条件路由。
+    Used for StateGraph conditional routing.
     
     Args:
-        state: 当前图状态
+        state: Current graph state
 
     Returns:
-        Literal["pattern", "process"]: 下一个节点的名称
-        - "pattern": 如果需要使用 LLM 生成过滤模式
-        - "process": 如果直接使用已有过滤模式
+        Literal["pattern", "process"]: Name of the next node
+        - "pattern": If LLM needs to generate filter patterns
+        - "process": If using existing filter patterns
     """
     return "pattern" if state["should_generate_patterns"] else "process"

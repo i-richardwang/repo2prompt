@@ -11,12 +11,12 @@ logger = logging.getLogger(__name__)
 
 
 async def cleanup_node(state: State) -> Dict[str, Any]:
-    """清理节点。
+    """Cleanup node.
 
-    职责：
-    1. 只清理当前请求创建的资源
-    2. 保持共享目录结构
-    3. 安全地处理并发情况
+    Responsibilities:
+    1. Only clean resources created by the current request
+    2. Maintain shared directory structure
+    3. Safely handle concurrent operations
     """
     cleaned = []
 
@@ -30,7 +30,7 @@ async def cleanup_node(state: State) -> Dict[str, Any]:
 
                 logger.info(f"Starting cleanup of request resources...")
 
-                # 只清理当前请求的目录
+                # Only clean the current request directory
                 if await _safe_cleanup_path(str(uuid_tmp_path)):
                     logger.info(f"Successfully cleaned request directory: {uuid_tmp_path}")
                     cleaned.append(str(uuid_tmp_path))
@@ -46,21 +46,21 @@ async def cleanup_node(state: State) -> Dict[str, Any]:
 
     finally:
         return {
-            "paths_to_clean": [],  # 清空待清理列表
-            "cleaned_paths": cleaned  # 更新已清理列表
+            "paths_to_clean": [],  # Clear the cleanup list
+            "cleaned_paths": cleaned  # Update cleaned list
         }
 
 async def _safe_cleanup_path(path: str) -> bool:
-    """安全地清理指定路径。
+    """Safely clean up the specified path.
     
     Args:
-        path: 要清理的路径
+        path: Path to clean up
 
     Returns:
-        bool: 清理是否成功
+        bool: Whether cleanup was successful
     """
     try:
-        # 验证路径合法性
+        # Validate path safety
         if not _is_safe_path(path):
             logger.warning(f"Unsafe path detected, skipping: {path}")
             return False
@@ -83,23 +83,23 @@ async def _safe_cleanup_path(path: str) -> bool:
         return False
 
 def _is_safe_path(path: str) -> bool:
-    """检查路径是否安全。
+    """Check if the path is safe.
     
     Args:
-        path: 要检查的路径
+        path: Path to check
 
     Returns:
-        bool: 路径是否安全
+        bool: Whether the path is safe
     """
     try:
-        # 转换为绝对路径
+        # Convert to absolute path
         abs_path = os.path.abspath(path)
         
-        # 基本安全检查
+        # Basic safety checks
         if not abs_path or abs_path == "/" or abs_path == "\\":
             return False
             
-        # 检查路径是否包含可疑模式
+        # Check for suspicious patterns
         suspicious_patterns = [".", "..", "~", "@", "$", "%", "*", "?"]
         return not any(pattern in os.path.basename(abs_path) for pattern in suspicious_patterns)
         

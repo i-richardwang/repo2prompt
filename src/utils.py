@@ -12,18 +12,18 @@ T = TypeVar("T")
 P = ParamSpec("P")
 
 def async_timeout(seconds: int = 10) -> Callable[[Callable[P, Awaitable[T]]], Callable[P, Awaitable[T]]]:
-    """异步操作超时装饰器。
+    """Decorator for adding timeout to async operations.
     
-    为异步函数添加超时限制，超过时间限制抛出 TimeoutError。
+    Adds a timeout limit to async functions, raising TimeoutError if exceeded.
 
     Args:
-        seconds: 超时时间（秒）
+        seconds: Timeout duration in seconds
 
     Returns:
-        装饰后的异步函数
+        Decorated async function
 
     Raises:
-        TimeoutError: 操作超时时抛出
+        TimeoutError: When operation exceeds timeout limit
     """
     def decorator(func: Callable[P, Awaitable[T]]) -> Callable[P, Awaitable[T]]:
         @functools.wraps(func)
@@ -36,37 +36,37 @@ def async_timeout(seconds: int = 10) -> Callable[[Callable[P, Awaitable[T]]], Ca
     return decorator
 
 def ensure_directory(path: str) -> Path:
-    """确保目录存在，如果不存在则创建。
+    """Ensure directory exists, create if it doesn't.
     
     Args:
-        path: 目录路径
+        path: Directory path
 
     Returns:
-        Path: 目录路径对象
+        Path: Path object for the directory
     """
     path_obj = Path(path)
     path_obj.mkdir(parents=True, exist_ok=True)
     return path_obj
 
 def normalize_path(path: str) -> str:
-    """规范化路径。
+    """Normalize file system path.
     
     Args:
-        path: 原始路径
+        path: Original path
 
     Returns:
-        str: 规范化后的路径
+        str: Normalized path
     """
     return str(Path(path).resolve())
 
 def calculate_directory_size(path: str) -> Optional[int]:
-    """计算目录总大小。
+    """Calculate total size of a directory.
     
     Args:
-        path: 目录路径
+        path: Directory path
 
     Returns:
-        Optional[int]: 总大小（字节），出错返回 None
+        Optional[int]: Total size in bytes, None if error occurs
     """
     try:
         total_size = 0
@@ -79,13 +79,13 @@ def calculate_directory_size(path: str) -> Optional[int]:
         return None
 
 def format_size(size_bytes: int) -> str:
-    """格式化文件大小显示。
+    """Format file size for display.
     
     Args:
-        size_bytes: 文件大小（字节）
+        size_bytes: Size in bytes
 
     Returns:
-        str: 格式化后的大小字符串
+        str: Formatted size string (e.g., "1.5 MB")
     """
     for unit in ['B', 'KB', 'MB', 'GB', 'TB']:
         if size_bytes < 1024.0:
@@ -94,33 +94,36 @@ def format_size(size_bytes: int) -> str:
     return f"{size_bytes:.1f} PB"
 
 def is_binary_file(file_path: str) -> bool:
-    """检查是否为二进制文件。
+    """Check if a file is binary.
     
     Args:
-        file_path: 文件路径
+        file_path: Path to the file
 
     Returns:
-        bool: 是否为二进制文件
+        bool: True if file is binary, False if text
+        
+    Note:
+        Returns True on error as a safety measure
     """
     try:
         with open(file_path, 'rb') as file:
             chunk = file.read(1024)
-            # 检查是否包含空字节或其他二进制字符
+            # Check for null bytes or other binary characters
             text_characters = bytes([7, 8, 9, 10, 12, 13, 27]) + bytes(range(0x20, 0x100))
             return bool(chunk.translate(None, text_characters))
     except Exception as e:
         logger.error(f"Failed to check file type: {str(e)}")
-        return True  # 出错时安全起见当作二进制文件
+        return True  # Treat as binary file for safety on error
 
 def truncate_string(text: str, max_length: int = 100) -> str:
-    """截断长字符串。
+    """Truncate long string with ellipsis.
     
     Args:
-        text: 原始字符串
-        max_length: 最大长度
+        text: Original string
+        max_length: Maximum length before truncation
 
     Returns:
-        str: 截断后的字符串
+        str: Truncated string with ellipsis if needed
     """
     if len(text) <= max_length:
         return text

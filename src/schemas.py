@@ -5,7 +5,11 @@ from pydantic import BaseModel, Field
 from langgraph.graph.message import add_messages
 
 class RepoRequest(BaseModel):
-    """Repository analysis request schema."""
+    """Repository analysis request schema.
+    
+    This model defines the structure of incoming repository analysis requests,
+    including URL, file size limits, and filtering options.
+    """
     url: str = Field(..., description="Git repository URL to analyze")
     max_file_size: Optional[int] = Field(
         default=None, 
@@ -25,7 +29,11 @@ class RepoRequest(BaseModel):
     )
 
 class PatternGeneratorResult(BaseModel):
-    """Result schema for pattern generation."""
+    """Result schema for pattern generation.
+    
+    This model represents the output of the LLM-based pattern generation process,
+    including the generated patterns and their explanation.
+    """
     pattern_type: Literal["include", "exclude"] = Field(
         ..., 
         description="Type of pattern matching applied"
@@ -40,7 +48,11 @@ class PatternGeneratorResult(BaseModel):
     )
 
 class RepoResponse(BaseModel):
-    """Repository analysis response schema."""
+    """Repository analysis response schema.
+    
+    This model defines the structure of the analysis response,
+    containing the repository summary, structure, and processed content.
+    """
     summary: str = Field(
         ..., 
         description="Summary of the repository analysis"
@@ -59,31 +71,36 @@ class RepoResponse(BaseModel):
     )
 
 class State(TypedDict):
-    """State schema for the Langgraph state machine."""
+    """State schema for the Langgraph state machine.
+    
+    This class defines the structure of the state object that flows through
+    the processing graph, containing all necessary information for each node.
+    """
     # Repository information
-    url: str
-    local_path: str
-    max_file_size: int
+    url: str  # Repository URL being analyzed
+    local_path: str  # Local path where repository is cloned
+    max_file_size: int  # Maximum size for individual files
     
-    # File filtering
-    pattern_type: Literal["include", "exclude"]
-    patterns: list[str]
-    user_query: Optional[str]
+    # File filtering configuration
+    pattern_type: Literal["include", "exclude"]  # Type of pattern matching
+    patterns: list[str]  # List of patterns to apply
+    user_query: Optional[str]  # Natural language query if provided
     
-    # Processing state
-    generated_patterns: Optional[PatternGeneratorResult]
-    tree: Optional[str]
-    content: Optional[str]
-    summary: Optional[str]
+    # Processing state information
+    generated_patterns: Optional[PatternGeneratorResult]  # LLM-generated patterns
+    tree: Optional[str]  # Repository structure representation
+    content: Optional[str]  # Processed file contents
+    summary: Optional[str]  # Analysis summary
     
-    # Messages for LLM interaction
-    messages: Annotated[list, add_messages]
+    # LLM interaction history
+    messages: Annotated[list, add_messages]  # Message history for LLM
     
-    # Cleanup information
-    paths_to_clean: list[str]
-    cleaned_paths: list[str]
-
-    # Control flags
-    should_generate_patterns: bool
-
-    scan_result: Optional[Dict[str, Any]]
+    # Resource cleanup tracking
+    paths_to_clean: list[str]  # Paths pending cleanup
+    cleaned_paths: list[str]  # Paths already cleaned
+    
+    # Process control
+    should_generate_patterns: bool  # Whether to generate patterns using LLM
+    
+    # Scan results
+    scan_result: Optional[Dict[str, Any]]  # Results from repository scan
