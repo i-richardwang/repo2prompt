@@ -1,11 +1,11 @@
 # src/nodes/pattern.py
 import logging
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import JsonOutputParser
 
-from ..schemas import State, PatternGeneratorResult
+from ..schemas import State, PatternGeneratorResult, LLMConfig
 from ..llm_tools import init_language_model
 
 logger = logging.getLogger(__name__)
@@ -58,8 +58,17 @@ Please generate appropriate file matching patterns based on user requirements an
 class PatternGenerator:
     """A tool class that uses LLM to generate file matching patterns."""
     
-    def __init__(self):
-        self.model = init_language_model(provider="siliconcloud", model_name="Qwen/Qwen2.5-72B-Instruct")
+    def __init__(self, llm_config: Optional[LLMConfig] = None):
+        """Initialize pattern generator with optional LLM configuration.
+        
+        Args:
+            llm_config: Optional custom LLM configuration
+        """
+        self.model = init_language_model(
+            provider="siliconcloud",
+            model_name="Qwen/Qwen2.5-72B-Instruct",
+            llm_config=llm_config
+        )
         self.parser = JsonOutputParser(pydantic_object=PatternGeneratorResult)
         self.prompt = ChatPromptTemplate.from_messages([
             ("system", SYSTEM_PROMPT),
@@ -95,12 +104,14 @@ async def pattern_node(state: State) -> Dict[str, Any]:
         if not state.get("should_generate_patterns"):
             return {}
 
-        generator = PatternGenerator()
+        # Get custom LLM configuration if provided
+        llm_config = state.get("llm_config")
+        
+        generator = PatternGenerator(llm_config=llm_config)
         result = await generator.generate(
             tree=state["tree"],
             query=state["user_query"]
         )
-        # result is a dictionary, use dictionary access method
         logger.info(f"Generated patterns: {result['patterns']}")
 
         return {

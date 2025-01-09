@@ -7,6 +7,8 @@ from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import JsonOutputParser
 
+from .schemas import LLMConfig
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
@@ -18,6 +20,7 @@ def init_language_model(
     temperature: float = 0.1,
     provider: Optional[str] = None,
     model_name: Optional[str] = None,
+    llm_config: Optional[LLMConfig] = None,
     **kwargs: Any,
 ) -> ChatOpenAI:
     """
@@ -27,6 +30,7 @@ def init_language_model(
         temperature: Model output temperature, controls randomness. Default is 0.0.
         provider: Optional model provider, overrides environment variable.
         model_name: Optional model name, overrides environment variable.
+        llm_config: Optional custom LLM configuration from request.
         **kwargs: Additional optional parameters passed to model initialization.
 
     Returns:
@@ -35,29 +39,42 @@ def init_language_model(
     Raises:
         ValueError: When provided parameters are invalid or required configuration is missing.
     """
-    provider = (
-        provider.lower() if provider else os.getenv("LLM_PROVIDER", "openai").lower()
-    )
-    model_name = model_name or os.getenv("LLM_MODEL", "gpt-4")
-
-    api_key_env_var = f"OPENAI_API_KEY_{provider.upper()}"
-    api_base_env_var = f"OPENAI_API_BASE_{provider.upper()}"
-
-    openai_api_key = os.environ.get(api_key_env_var)
-    openai_api_base = os.environ.get(api_base_env_var)
-
-    if not openai_api_key or not openai_api_base:
-        raise ValueError(
-            f"Could not find API key or base URL for {provider}. Please check environment variables."
+    if llm_config:
+        # Use user-provided configuration
+        logger.info(f"Using custom LLM configuration with model: {llm_config.model_name}")
+        model_params = {
+            "model": llm_config.model_name,
+            "openai_api_key": llm_config.api_key,
+            "openai_api_base": llm_config.api_base,
+            "temperature": temperature,
+            **kwargs,
+        }
+    else:
+        # Use environment variable configuration
+        provider = (
+            provider.lower() if provider else os.getenv("LLM_PROVIDER", "openai").lower()
         )
+        model_name = model_name or os.getenv("LLM_MODEL", "gpt-4")
+        logger.info(f"Using environment configuration with provider: {provider}, model: {model_name}")
 
-    model_params = {
-        "model": model_name,
-        "openai_api_key": openai_api_key,
-        "openai_api_base": openai_api_base,
-        "temperature": temperature,
-        **kwargs,
-    }
+        api_key_env_var = f"OPENAI_API_KEY_{provider.upper()}"
+        api_base_env_var = f"OPENAI_API_BASE_{provider.upper()}"
+
+        openai_api_key = os.environ.get(api_key_env_var)
+        openai_api_base = os.environ.get(api_base_env_var)
+
+        if not openai_api_key or not openai_api_base:
+            raise ValueError(
+                f"Could not find API key or base URL for {provider}. Please check environment variables."
+            )
+
+        model_params = {
+            "model": model_name,
+            "openai_api_key": openai_api_key,
+            "openai_api_base": openai_api_base,
+            "temperature": temperature,
+            **kwargs,
+        }
 
     return ChatOpenAI(**model_params)
 
@@ -74,7 +91,7 @@ class LanguageModelChain:
     """
 
     def __init__(
-        self, model_cls: Type[BaseModel], sys_msg: str, user_msg: str, model: Any
+        self, model_cls: Type[BaseModel], sys_msg: str, user_msg: str, model: Any, llm_config: Optional[LLMConfig] = None
     ):
         """
         Initialize a LanguageModelChain instance.
@@ -84,6 +101,7 @@ class LanguageModelChain:
             sys_msg: System message.
             user_msg: User message.
             model: Language model instance.
+            llm_config: Optional custom LLM configuration.
 
         Raises:
             ValueError: When provided parameters are invalid.

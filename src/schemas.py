@@ -4,6 +4,45 @@ from typing_extensions import TypedDict
 from pydantic import BaseModel, Field
 from langgraph.graph.message import add_messages
 
+from .utils.crypto import AESCipher
+
+class LLMConfig(BaseModel):
+    """LLM configuration from request headers.
+    
+    This model represents the custom LLM configuration provided in request headers,
+    including API credentials and model selection.
+    """
+    model_config = {
+        "protected_namespaces": ()  # Disable protected namespaces to resolve warning
+    }
+    
+    api_key: str = Field(..., description="LLM API key")
+    api_base: str = Field(..., description="LLM API base URL")
+    model_name: str = Field(..., description="LLM model name")
+
+    @classmethod
+    def from_encrypted_headers(cls, headers: Dict[str, str], cipher: AESCipher) -> Optional['LLMConfig']:
+        """Create LLMConfig from encrypted headers.
+        
+        Args:
+            headers: Request headers dictionary
+            cipher: AESCipher instance for decryption
+            
+        Returns:
+            LLMConfig instance if all required headers are present, None otherwise
+        """
+        try:
+            if all(key in headers for key in ['X-LLM-API-Key', 'X-LLM-API-Base', 'X-LLM-Model']):
+                return cls(
+                    api_key=cipher.decrypt(headers['X-LLM-API-Key']),
+                    api_base=cipher.decrypt(headers['X-LLM-API-Base']),
+                    model_name=cipher.decrypt(headers['X-LLM-Model'])
+                )
+            return None
+        except Exception as e:
+            logger.warning(f"Failed to parse LLM config from headers: {str(e)}")
+            return None
+
 class RepoRequest(BaseModel):
     """Repository analysis request schema.
     
@@ -92,7 +131,8 @@ class State(TypedDict):
     content: Optional[str]  # Processed file contents
     summary: Optional[str]  # Analysis summary
     
-    # LLM interaction history
+    # LLM configuration and interaction
+    llm_config: Optional[LLMConfig]  # Custom LLM configuration if provided
     messages: Annotated[list, add_messages]  # Message history for LLM
     
     # Resource cleanup tracking
