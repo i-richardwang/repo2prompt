@@ -6,13 +6,12 @@ from pathlib import Path
 from typing import Optional
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException, Header, Request
+from fastapi import FastAPI, HTTPException, Header
 from fastapi.middleware.cors import CORSMiddleware
 from langchain_core.messages import HumanMessage
 
 from .config import API_TITLE, API_VERSION, ALLOWED_ORIGINS, TMP_BASE_PATH, DEFAULT_MAX_FILE_SIZE
-from .schemas import RepoRequest, RepoResponse, State, LLMConfig
-from .utils.crypto import AESCipher
+from .schemas import RepoRequest, RepoResponse, State
 from .nodes.clone import clone_node
 from .nodes.tree import tree_node
 from .nodes.route import route_node, determine_next_node
@@ -91,53 +90,16 @@ def build_graph() -> StateGraph:
 # Create graph instance
 GRAPH = build_graph()
 
-def _prepare_initial_state(
-    request: RepoRequest,
-    llm_config: Optional[LLMConfig] = None
-) -> dict:
-    """Prepare initial state.
-    
-    Args:
-        request: Analysis request
-        llm_config: Optional custom LLM configuration
-        
-    Returns:
-        Initial state dictionary
-    """
-    # Generate unique ID and local path
-    _id = str(uuid.uuid4())
-    repo_name = os.path.basename(request.url.rstrip('/')).replace('.git', '')
-    local_path = str(Path(TMP_BASE_PATH) / _id / repo_name)
-    
-    state = {
-        "url": request.url,
-        "max_file_size": request.max_file_size or DEFAULT_MAX_FILE_SIZE,
-        "pattern_type": request.pattern_type,
-        "patterns": request.pattern.split(',') if request.pattern else [],
-        "user_query": request.query,
-        "messages": [],  # LLM interaction message history
-        "paths_to_clean": [],  # Paths to clean up
-        "should_generate_patterns": False,  # Routing flag
-        "local_path": local_path,  # Add local path
-        "repo_name": repo_name,  # Add repo name for later use
-    }
-    
-    # Add LLM configuration if provided
-    if llm_config:
-        state["llm_config"] = llm_config
-        
-    return state
-
 @app.post("/api/analyze", response_model=RepoResponse)
 async def analyze_repository(
     request: RepoRequest,
-    request_obj: Request
+    authorization: Optional[str] = Header(None, description="Bearer token for API authentication")
 ):
     """API endpoint for analyzing repository content.
     
     Args:
         request: Request object containing repository URL and analysis parameters
-        request_obj: FastAPI request object for accessing headers
+        authorization: Optional Bearer token containing API key. If not provided, uses environment variable.
 
     Returns:
         RepoResponse: Analysis results
@@ -148,19 +110,35 @@ async def analyze_repository(
     try:
         logger.info(f"Starting repository analysis: {request.url}")
         
-        # Parse LLM configuration from headers if provided
-        llm_config = None
-        try:
-            if any(key.startswith('x-llm-') for key in request_obj.headers):
-                cipher = AESCipher()
-                llm_config = LLMConfig.from_encrypted_headers(dict(request_obj.headers), cipher)
-                if llm_config:
-                    logger.info("Using custom LLM configuration from headers")
-        except Exception as e:
-            logger.warning(f"Failed to parse LLM configuration from headers: {str(e)}")
+        # Get API key from authorization header or environment
+        api_key = None
+        if authorization:
+            if not authorization.startswith("Bearer "):
+                raise HTTPException(status_code=401, detail="Invalid authorization header format")
+            api_key = authorization.replace("Bearer ", "")
+        
+        # Initialize LLM model before graph execution
+        from .llm_tools import init_language_model
+        model = init_language_model(
+            api_key=api_key,  # If None, will use environment variable
+            base_url=str(request.base_url) if request.base_url else None,  # If None, will use environment variable
+            model_name=request.model_name  # If None, will use environment variable
+        )
         
         # Prepare initial state
-        initial_state = _prepare_initial_state(request, llm_config)
+        initial_state = {
+            "url": request.url,
+            "max_file_size": request.max_file_size or DEFAULT_MAX_FILE_SIZE,
+            "pattern_type": request.pattern_type,
+            "patterns": request.pattern.split(',') if request.pattern else [],
+            "user_query": request.query,
+            "messages": [],  # LLM interaction message history
+            "paths_to_clean": [],  # Paths to clean up
+            "should_generate_patterns": False,  # Routing flag
+            "local_path": str(Path(TMP_BASE_PATH) / str(uuid.uuid4()) / os.path.basename(request.url.rstrip('/')).replace('.git', '')),
+            "repo_name": os.path.basename(request.url.rstrip('/')).replace('.git', ''),
+            "model": model,  # Add initialized model to state
+        }
         
         # If there's a user query, add it to message history
         if request.query:

@@ -18,11 +18,6 @@ API_VERSION = "1.0.0"
 # Comma-separated list of allowed origins for CORS
 ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000").split(",")
 
-# LLM Configuration
-# Provider and model settings for the Language Model
-LLM_PROVIDER = os.getenv("LLM_PROVIDER", "siliconcloud")
-LLM_MODEL = os.getenv("LLM_MODEL", "Qwen/Qwen2.5-72B-Instruct")
-
 # Clone Configuration
 # Timeout for repository cloning operations
 CLONE_TIMEOUT = 20  # seconds

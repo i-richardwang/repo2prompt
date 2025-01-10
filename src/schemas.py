@@ -1,59 +1,42 @@
 # src/schemas.py
 from typing import Annotated, Optional, Literal, Dict, Any
 from typing_extensions import TypedDict
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, HttpUrl
 from langgraph.graph.message import add_messages
 
-from .utils.crypto import AESCipher
+import logging
 
-class LLMConfig(BaseModel):
-    """LLM configuration from request headers.
-    
-    This model represents the custom LLM configuration provided in request headers,
-    including API credentials and model selection.
-    """
-    model_config = {
-        "protected_namespaces": ()  # Disable protected namespaces to resolve warning
-    }
-    
-    api_key: str = Field(..., description="LLM API key")
-    api_base: str = Field(..., description="LLM API base URL")
-    model_name: str = Field(..., description="LLM model name")
+logger = logging.getLogger(__name__)
 
-    @classmethod
-    def from_encrypted_headers(cls, headers: Dict[str, str], cipher: AESCipher) -> Optional['LLMConfig']:
-        """Create LLMConfig from encrypted headers.
-        
-        Args:
-            headers: Request headers dictionary
-            cipher: AESCipher instance for decryption
-            
-        Returns:
-            LLMConfig instance if all required headers are present, None otherwise
-        """
-        try:
-            if all(key in headers for key in ['X-LLM-API-Key', 'X-LLM-API-Base', 'X-LLM-Model']):
-                return cls(
-                    api_key=cipher.decrypt(headers['X-LLM-API-Key']),
-                    api_base=cipher.decrypt(headers['X-LLM-API-Base']),
-                    model_name=cipher.decrypt(headers['X-LLM-Model'])
-                )
-            return None
-        except Exception as e:
-            logger.warning(f"Failed to parse LLM config from headers: {str(e)}")
-            return None
 
 class RepoRequest(BaseModel):
     """Repository analysis request schema.
     
     This model defines the structure of incoming repository analysis requests,
-    including URL, file size limits, and filtering options.
+    including URL, LLM configuration, and filtering options.
     """
+    model_config = {
+        "protected_namespaces": ()  # Disable protected namespaces to resolve warning
+    }
+
+    # Repository configuration
     url: str = Field(..., description="Git repository URL to analyze")
     max_file_size: Optional[int] = Field(
         default=None, 
         description="Maximum file size in bytes to process"
     )
+    
+    # LLM configuration
+    base_url: Optional[HttpUrl] = Field(
+        default=None,
+        description="Custom LLM API base URL. If not provided, uses environment variable."
+    )
+    model_name: Optional[str] = Field(
+        default=None,
+        description="Custom LLM model name. If not provided, uses environment variable."
+    )
+    
+    # Filter configuration
     pattern_type: Optional[Literal["include", "exclude"]] = Field(
         default="exclude",
         description="Type of pattern matching to apply"
@@ -131,8 +114,7 @@ class State(TypedDict):
     content: Optional[str]  # Processed file contents
     summary: Optional[str]  # Analysis summary
     
-    # LLM configuration and interaction
-    llm_config: Optional[LLMConfig]  # Custom LLM configuration if provided
+    # Message history
     messages: Annotated[list, add_messages]  # Message history for LLM
     
     # Resource cleanup tracking
@@ -144,3 +126,6 @@ class State(TypedDict):
     
     # Scan results
     scan_result: Optional[Dict[str, Any]]  # Results from repository scan
+    
+    # LLM model
+    model: Any  # Initialized language model instance

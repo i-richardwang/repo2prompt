@@ -1,13 +1,11 @@
 import os
 import logging
-from typing import Any, Dict, List, Tuple, Optional, Type, Union
+from typing import Any, Optional, Type
 
-from pydantic import BaseModel
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import JsonOutputParser
-
-from .schemas import LLMConfig
+from pydantic import BaseModel
 
 # Configure logging
 logging.basicConfig(
@@ -18,63 +16,47 @@ logger = logging.getLogger(__name__)
 
 def init_language_model(
     temperature: float = 0.1,
-    provider: Optional[str] = None,
+    api_key: Optional[str] = None,
+    base_url: Optional[str] = None,
     model_name: Optional[str] = None,
-    llm_config: Optional[LLMConfig] = None,
     **kwargs: Any,
 ) -> ChatOpenAI:
     """
-    Initialize language model, supporting OpenAI and other model providers.
+    Initialize language model using OpenAI configuration.
 
     Args:
-        temperature: Model output temperature, controls randomness. Default is 0.0.
-        provider: Optional model provider, overrides environment variable.
-        model_name: Optional model name, overrides environment variable.
-        llm_config: Optional custom LLM configuration from request.
+        temperature: Model output temperature, controls randomness. Default is 0.1.
+        api_key: Optional API key. If not provided, uses OPENAI_API_KEY environment variable.
+        base_url: Optional API base URL. If not provided, uses OPENAI_API_BASE environment variable.
+        model_name: Optional model name. If not provided, uses MODEL_NAME environment variable.
         **kwargs: Additional optional parameters passed to model initialization.
 
     Returns:
         Initialized language model instance.
 
     Raises:
-        ValueError: When provided parameters are invalid or required configuration is missing.
+        ValueError: When required configuration is missing.
     """
-    if llm_config:
-        # Use user-provided configuration
-        logger.info(f"Using custom LLM configuration with model: {llm_config.model_name}")
-        model_params = {
-            "model": llm_config.model_name,
-            "openai_api_key": llm_config.api_key,
-            "openai_api_base": llm_config.api_base,
-            "temperature": temperature,
-            **kwargs,
-        }
-    else:
-        # Use environment variable configuration
-        provider = (
-            provider.lower() if provider else os.getenv("LLM_PROVIDER", "openai").lower()
-        )
-        model_name = model_name or os.getenv("LLM_MODEL", "gpt-4")
-        logger.info(f"Using environment configuration with provider: {provider}, model: {model_name}")
+    # Get API key from argument or environment
+    openai_api_key = api_key or os.getenv("OPENAI_API_KEY")
+    if not openai_api_key:
+        raise ValueError("OpenAI API key is required. Provide it via argument or OPENAI_API_KEY environment variable.")
 
-        api_key_env_var = f"OPENAI_API_KEY_{provider.upper()}"
-        api_base_env_var = f"OPENAI_API_BASE_{provider.upper()}"
+    # Get other configurations
+    openai_api_base = base_url or os.getenv("OPENAI_API_BASE")
+    if not openai_api_base:
+        raise ValueError("OpenAI API base URL is required. Provide it via argument or OPENAI_API_BASE environment variable.")
 
-        openai_api_key = os.environ.get(api_key_env_var)
-        openai_api_base = os.environ.get(api_base_env_var)
+    model = model_name or os.getenv("MODEL_NAME", "gpt-4")
+    logger.info(f"Using model: {model}")
 
-        if not openai_api_key or not openai_api_base:
-            raise ValueError(
-                f"Could not find API key or base URL for {provider}. Please check environment variables."
-            )
-
-        model_params = {
-            "model": model_name,
-            "openai_api_key": openai_api_key,
-            "openai_api_base": openai_api_base,
-            "temperature": temperature,
-            **kwargs,
-        }
+    model_params = {
+        "model": model,
+        "openai_api_key": openai_api_key,
+        "openai_api_base": openai_api_base,
+        "temperature": temperature,
+        **kwargs,
+    }
 
     return ChatOpenAI(**model_params)
 
@@ -91,7 +73,7 @@ class LanguageModelChain:
     """
 
     def __init__(
-        self, model_cls: Type[BaseModel], sys_msg: str, user_msg: str, model: Any, llm_config: Optional[LLMConfig] = None
+        self, model_cls: Type[BaseModel], sys_msg: str, user_msg: str, model: Any
     ):
         """
         Initialize a LanguageModelChain instance.
@@ -101,7 +83,6 @@ class LanguageModelChain:
             sys_msg: System message.
             user_msg: User message.
             model: Language model instance.
-            llm_config: Optional custom LLM configuration.
 
         Raises:
             ValueError: When provided parameters are invalid.

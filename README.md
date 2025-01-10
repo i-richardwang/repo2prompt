@@ -78,7 +78,7 @@ pip install -r requirements.txt
 ### Starting the Server
 
 ```bash
-uvicorn src.main:app --reload
+uvicorn src.main:app --reload-include "src/**/*"
 ```
 
 ### API Endpoint
