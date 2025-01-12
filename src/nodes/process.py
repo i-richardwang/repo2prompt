@@ -127,15 +127,8 @@ def _create_summary_string(node: Dict[str, Any], state: Dict[str, Any]) -> str:
     # File statistics
     parts.append(f"Files analyzed: {node['file_count']}")
 
-    # Filter pattern information
-    if state.get("generated_patterns"):
-        pattern_result = state["generated_patterns"]
-        parts.append(f"Pattern type: {pattern_result['pattern_type']}")
-        parts.append("Applied patterns:")
-        for pattern in pattern_result['patterns']:
-            parts.append(f"  - {pattern}")
-        parts.append(f"Explanation: {pattern_result['explanation']}")
-    elif state.get("patterns"):
+    # Filter pattern information (only for manually specified patterns)
+    if not state.get("generated_patterns") and state.get("patterns"):
         parts.append(f"Pattern type: {state['pattern_type']}")
         parts.append("Applied patterns:")
         for pattern in state["patterns"]:

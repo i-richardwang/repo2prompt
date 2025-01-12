@@ -32,7 +32,13 @@ As a Git repository analysis expert, you need to help users generate appropriate
    - Project directory structure
    - Common development standards and best practices
 
-Please choose the simplest effective approach to meet user requirements.
+5. Handling uncertainty:
+   - If the directory structure doesn't clearly indicate where the desired code is located:
+     * Prefer broader matches over narrow ones
+     * Include parent directories that might contain relevant code
+     * Consider common locations based on development conventions
+
+Please choose the simplest effective approach to meet user requirements, but when in doubt, provide broader coverage to ensure relevant code is not missed.
 
 Output your answer as a JSON object that conforms to the following schema:
 {schema}
@@ -46,10 +52,12 @@ Important instructions:
 
 USER_PROMPT = """
 Project directory structure:
+```
 {tree}
+```
 
 User requirements:
-{query}
+[{query}]
 
 Please generate appropriate file matching patterns based on user requirements and project structure.
 """

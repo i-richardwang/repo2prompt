@@ -47,7 +47,7 @@ def init_language_model(
     if not openai_api_base:
         raise ValueError("OpenAI API base URL is required. Provide it via argument or OPENAI_API_BASE environment variable.")
 
-    model = model_name or os.getenv("MODEL_NAME", "gpt-4")
+    model = model_name or os.getenv("MODEL_NAME", "gpt-4o")
     logger.info(f"Using model: {model}")
 
     model_params = {
