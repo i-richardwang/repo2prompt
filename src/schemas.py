@@ -69,13 +69,28 @@ class PatternGeneratorResult(BaseModel):
         description="Explanation of the generated patterns"
     )
 
+class Summary(BaseModel):
+    """Repository analysis summary schema."""
+    repository_name: str = Field(
+        ...,
+        description="Name of the analyzed repository"
+    )
+    files_analyzed: int = Field(
+        ...,
+        description="Number of files analyzed"
+    )
+    estimated_tokens: Optional[str] = Field(
+        default=None,
+        description="Estimated token count of processed content"
+    )
+
 class RepoResponse(BaseModel):
     """Repository analysis response schema.
     
     This model defines the structure of the analysis response,
     containing the repository summary, structure, and processed content.
     """
-    summary: str = Field(
+    summary: Summary = Field(
         ..., 
         description="Summary of the repository analysis"
     )

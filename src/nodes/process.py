@@ -3,7 +3,7 @@ import os
 import tiktoken
 from typing import Any, Dict, List, Optional
 
-from ..schemas import State
+from ..schemas import State, Summary
 from ..config import DEFAULT_MAX_FILE_SIZE
 
 async def process_node(state: State) -> Dict[str, Any]:
@@ -33,16 +33,21 @@ async def process_node(state: State) -> Dict[str, Any]:
             max_file_size
         )
         
+        # Count files that passed the filter
+        filtered_file_count = len([f for f in files if f["content"] is not None])
+        
         # Generate content string
         content = _create_file_content_string(files)
         
         # Generate summary
-        summary = _create_summary_string(scan_result, state)
+        repo_name = state.get("repo_name", os.path.basename(state["local_path"]))
+        estimated_tokens = _generate_token_string(content)
         
-        # Estimate token count
-        formatted_tokens = _generate_token_string(content)
-        if formatted_tokens:
-            summary += f"\nEstimated tokens: {formatted_tokens}"
+        summary = Summary(
+            repository_name=repo_name,
+            files_analyzed=filtered_file_count,
+            estimated_tokens=estimated_tokens
+        )
             
         return {
             "content": content,
