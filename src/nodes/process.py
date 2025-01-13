@@ -2,9 +2,36 @@
 import os
 import tiktoken
 from typing import Any, Dict, List, Optional
+from urllib.parse import urlparse
 
 from ..schemas import State, Summary
 from ..config import DEFAULT_MAX_FILE_SIZE
+
+def _extract_repo_identifier(url: str) -> str:
+    """Extract repository identifier (owner/repo) from GitHub URL.
+    
+    Args:
+        url: GitHub repository URL
+        
+    Returns:
+        str: Repository identifier in format "owner/repo"
+    """
+    try:
+        # Parse URL and get path
+        parsed = urlparse(url)
+        path_parts = parsed.path.strip("/").split("/")
+        
+        # Extract owner and repo name
+        if len(path_parts) >= 2:
+            owner, repo = path_parts[0], path_parts[1]
+            # Remove .git suffix if present
+            repo = repo.replace(".git", "")
+            return f"{owner}/{repo}"
+    except Exception:
+        pass
+    
+    # Fallback to just repo name if URL parsing fails
+    return os.path.basename(url.rstrip("/")).replace(".git", "")
 
 async def process_node(state: State) -> Dict[str, Any]:
     """Content processing node.
@@ -40,11 +67,11 @@ async def process_node(state: State) -> Dict[str, Any]:
         content = _create_file_content_string(files)
         
         # Generate summary
-        repo_name = state.get("repo_name", os.path.basename(state["local_path"]))
+        repo_identifier = _extract_repo_identifier(state["url"])
         estimated_tokens = _generate_token_string(content)
         
         summary = Summary(
-            repository_name=repo_name,
+            repository_name=repo_identifier,
             files_analyzed=filtered_file_count,
             estimated_tokens=estimated_tokens
         )
