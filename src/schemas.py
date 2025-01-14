@@ -84,6 +84,21 @@ class Summary(BaseModel):
         description="Estimated token count of processed content"
     )
 
+class DiagramGeneratorResult(BaseModel):
+    """Result schema for diagram generation.
+    
+    This model represents the output of the LLM-based diagram generation process,
+    including the Mermaid.js diagram code and explanation.
+    """
+    diagram: str = Field(
+        ..., 
+        description="Mermaid.js diagram code"
+    )
+    explanation: str = Field(
+        ..., 
+        description="Explanation of the generated diagram"
+    )
+
 class RepoResponse(BaseModel):
     """Repository analysis response schema.
     
@@ -105,6 +120,10 @@ class RepoResponse(BaseModel):
     generated_patterns: Optional[PatternGeneratorResult] = Field(
         default=None,
         description="Generated patterns if query was provided"
+    )
+    generated_diagram: Optional[DiagramGeneratorResult] = Field(
+        default=None,
+        description="Generated system design diagram"
     )
 
 class State(TypedDict):
@@ -144,3 +163,8 @@ class State(TypedDict):
     
     # LLM model
     model: Any  # Initialized language model instance
+    
+    # Diagram information
+    diagram: Optional[str]  # Generated Mermaid.js diagram code
+    diagram_explanation: Optional[str]  # Explanation of the diagram
+    generated_diagram: Optional[DiagramGeneratorResult]  # Complete diagram result

@@ -18,6 +18,7 @@ from .nodes.route import route_node, determine_next_node
 from .nodes.pattern import pattern_node
 from .nodes.process import process_node
 from .nodes.cleanup import cleanup_node
+from .nodes.diagram import diagram_node
 
 from langgraph.graph import StateGraph, START, END
 
@@ -57,6 +58,7 @@ def build_graph() -> StateGraph:
     builder.add_node("route_task", route_node)
     builder.add_node("generate_pattern", pattern_node)
     builder.add_node("process_content", process_node)
+    builder.add_node("generate_diagram", diagram_node)
     builder.add_node("cleanup_resources", cleanup_node)
     
     # Set entry point
@@ -79,8 +81,11 @@ def build_graph() -> StateGraph:
     # Continue processing after pattern generation
     builder.add_edge("generate_pattern", "process_content")
     
+    # Add diagram generation step
+    builder.add_edge("process_content", "generate_diagram")
+    
     # Clean up after processing
-    builder.add_edge("process_content", "cleanup_resources")
+    builder.add_edge("generate_diagram", "cleanup_resources")
     
     # End after cleanup
     builder.add_edge("cleanup_resources", END)
@@ -158,7 +163,8 @@ async def analyze_repository(
             summary=final_state["summary"],
             tree=final_state["tree"],
             content=final_state["content"],
-            generated_patterns=final_state.get("generated_patterns")
+            generated_patterns=final_state.get("generated_patterns"),
+            generated_diagram=final_state.get("generated_diagram")
         )
         
         logger.info("Analysis completed successfully")
