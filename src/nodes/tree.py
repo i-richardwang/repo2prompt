@@ -9,6 +9,7 @@ from ..config import (
     MAX_FILES,
     MAX_TOTAL_SIZE_BYTES
 )
+from ..utils.ignore_patterns import DEFAULT_IGNORE_PATTERNS
 
 async def tree_node(state: State) -> dict:
     """Directory tree generation node.
@@ -26,11 +27,19 @@ async def tree_node(state: State) -> dict:
         dict: State update containing directory tree
     """
     try:
+        # Combine default ignore patterns with user patterns
+        patterns = list(DEFAULT_IGNORE_PATTERNS)
+        if state.get("patterns"):
+            if state.get("pattern_type") == "include":
+                patterns = state["patterns"]  # Override defaults for include mode
+            else:
+                patterns.extend(state["patterns"])
+        
         nodes = await _scan_directory(
             path=state["local_path"],
             base_path=state["local_path"],
-            patterns=state.get("patterns", []),
-            pattern_type=state.get("pattern_type", "exclude")
+            patterns=patterns,
+            pattern_type="exclude"  # Always use exclude for default patterns
         )
         
         if not nodes:

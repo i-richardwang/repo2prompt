@@ -2,10 +2,8 @@
 import logging
 from typing import Any, Dict
 
-from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.output_parsers import JsonOutputParser
-
 from ..schemas import State, PatternGeneratorResult
+from ..llm_tools import LanguageModelChain
 
 logger = logging.getLogger(__name__)
 
@@ -39,15 +37,6 @@ As a Git repository analysis expert, you need to help users generate appropriate
      * Consider common locations based on development conventions
 
 Please choose the simplest effective approach to meet user requirements, but when in doubt, provide broader coverage to ensure relevant code is not missed.
-
-Output your answer as a JSON object that conforms to the following schema:
-{schema}
-
-Important instructions:
-1. Ensure your JSON is valid and properly formatted.
-2. Do not include the schema definition in your answer.
-3. Only output the data instance that matches the schema.
-4. Do not include any explanations or comments within the JSON output.
 """
 
 USER_PROMPT = """
@@ -71,14 +60,12 @@ class PatternGenerator:
         Args:
             model: Initialized language model instance
         """
-        self.model = model
-        self.parser = JsonOutputParser(pydantic_object=PatternGeneratorResult)
-        self.prompt = ChatPromptTemplate.from_messages([
-            ("system", SYSTEM_PROMPT),
-            ("human", USER_PROMPT),
-        ]).partial(schema=PatternGeneratorResult.model_json_schema())
-        
-        self.chain = self.prompt | self.model | self.parser
+        self.chain = LanguageModelChain(
+            model_cls=PatternGeneratorResult,
+            sys_msg=SYSTEM_PROMPT,
+            user_msg=USER_PROMPT,
+            model=model
+        )
     
     async def generate(self, tree: str, query: str) -> PatternGeneratorResult:
         """Generate file matching patterns.
@@ -91,7 +78,8 @@ class PatternGenerator:
             PatternGeneratorResult: Generated pattern result
         """
         try:
-            result = await self.chain.ainvoke({
+            chain = self.chain()
+            result = await chain.ainvoke({
                 "tree": tree,
                 "query": query,
             })

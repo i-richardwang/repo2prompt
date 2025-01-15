@@ -6,6 +6,7 @@ from urllib.parse import urlparse
 
 from ..schemas import State, Summary
 from ..config import DEFAULT_MAX_FILE_SIZE
+from ..utils.ignore_patterns import DEFAULT_IGNORE_PATTERNS
 
 def _extract_repo_identifier(url: str) -> str:
     """Extract repository identifier (owner/repo) from GitHub URL.
@@ -102,7 +103,11 @@ async def _extract_files_content(
         file_path = node["path"]
         rel_path = os.path.relpath(file_path, base_path)
         
-        # Apply filter patterns
+        # First check against default ignore patterns - these are always excluded
+        if _should_process(rel_path, DEFAULT_IGNORE_PATTERNS, "exclude") is False:
+            return files
+            
+        # Then apply user patterns
         should_process = _should_process(rel_path, patterns, pattern_type)
         if not should_process:
             return files
@@ -119,6 +124,11 @@ async def _extract_files_content(
             })
             
     elif node["type"] == "directory" and not node.get("ignore_content", False):
+        # Check if directory should be excluded based on default patterns
+        rel_path = os.path.relpath(node["path"], base_path)
+        if _should_process(rel_path, DEFAULT_IGNORE_PATTERNS, "exclude") is False:
+            return files
+            
         for child in node["children"]:
             await _extract_files_content(
                 node=child,

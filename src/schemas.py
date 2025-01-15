@@ -88,15 +88,11 @@ class DiagramGeneratorResult(BaseModel):
     """Result schema for diagram generation.
     
     This model represents the output of the LLM-based diagram generation process,
-    including the Mermaid.js diagram code and explanation.
+    containing the Mermaid.js diagram code.
     """
     diagram: str = Field(
         ..., 
         description="Mermaid.js diagram code"
-    )
-    explanation: str = Field(
-        ..., 
-        description="Explanation of the generated diagram"
     )
 
 class RepoResponse(BaseModel):
@@ -166,5 +162,4 @@ class State(TypedDict):
     
     # Diagram information
     diagram: Optional[str]  # Generated Mermaid.js diagram code
-    diagram_explanation: Optional[str]  # Explanation of the diagram
     generated_diagram: Optional[DiagramGeneratorResult]  # Complete diagram result

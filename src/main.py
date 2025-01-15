@@ -95,6 +95,9 @@ def build_graph() -> StateGraph:
 # Create graph instance
 GRAPH = build_graph()
 
+from langfuse import Langfuse
+from langfuse.callback import CallbackHandler
+
 @app.post("/api/analyze", response_model=RepoResponse)
 async def analyze_repository(
     request: RepoRequest,
@@ -150,10 +153,12 @@ async def analyze_repository(
             initial_state["messages"].append(
                 HumanMessage(content=request.query)
             )
-        
+
+        langfuse_handler = CallbackHandler()
+
         # Execute graph
         try:
-            final_state = await GRAPH.ainvoke(initial_state)
+            final_state = await GRAPH.ainvoke(initial_state, config={"callbacks": [langfuse_handler]})
         except Exception as e:
             logger.error(f"Graph execution failed: {str(e)}")
             raise ValueError(f"Failed to process repository: {str(e)}")
