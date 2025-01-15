@@ -27,7 +27,7 @@ from langchain_community.cache import SQLiteCache
 
 
 # 设置LLM缓存
-set_llm_cache(SQLiteCache(database_path="./data/llm_cache/langchain.db"))
+set_llm_cache(SQLiteCache(database_path="./tmp/langchain.db"))
 
 
 # Configure logging

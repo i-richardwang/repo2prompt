@@ -24,6 +24,7 @@ As a Git repository analysis expert, you need to help users generate appropriate
    - Only use letters, numbers, underscore(_), hyphen(-), dot(.), slash(/), plus(+), and asterisk(*)
    - Directory matching must end with /*
    - Do not use ** or other advanced glob syntax
+   - Do not include the project name in patterns
 
 4. Consider:
    - User's specific requirements
