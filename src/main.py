@@ -14,13 +14,21 @@ from .config import API_TITLE, API_VERSION, ALLOWED_ORIGINS, TMP_BASE_PATH, DEFA
 from .schemas import RepoRequest, RepoResponse, State
 from .nodes.clone import clone_node
 from .nodes.tree import tree_node
-from .nodes.route import route_node, determine_next_node
+from .nodes.route import route_pattern_node, route_diagram_node, determine_next_node, determine_diagram_node
 from .nodes.pattern import pattern_node
 from .nodes.process import process_node
 from .nodes.cleanup import cleanup_node
 from .nodes.diagram import diagram_node
 
 from langgraph.graph import StateGraph, START, END
+
+from langchain_core.globals import set_llm_cache
+from langchain_community.cache import SQLiteCache
+
+
+# 设置LLM缓存
+set_llm_cache(SQLiteCache(database_path="./data/llm_cache/langchain.db"))
+
 
 # Configure logging
 logging.basicConfig(
@@ -55,7 +63,8 @@ def build_graph() -> StateGraph:
     # Add all nodes with more descriptive names
     builder.add_node("clone_repo", clone_node)
     builder.add_node("scan_tree", tree_node)
-    builder.add_node("route_task", route_node)
+    builder.add_node("route_pattern", route_pattern_node)
+    builder.add_node("route_diagram", route_diagram_node)
     builder.add_node("generate_pattern", pattern_node)
     builder.add_node("process_content", process_node)
     builder.add_node("generate_diagram", diagram_node)
@@ -66,26 +75,37 @@ def build_graph() -> StateGraph:
     
     # Set main processing flow
     builder.add_edge("clone_repo", "scan_tree")
-    builder.add_edge("scan_tree", "route_task")
     
-    # Add conditional edges
+    # Split into two parallel paths after scan_tree
+    builder.add_edge("scan_tree", "route_pattern")
+    builder.add_edge("scan_tree", "route_diagram")
+    
+    # Pattern generation path
     builder.add_conditional_edges(
-        "route_task",
+        "route_pattern",
         determine_next_node,
         {
             "pattern": "generate_pattern",
             "process": "process_content"
         }
     )
-    
-    # Continue processing after pattern generation
     builder.add_edge("generate_pattern", "process_content")
     
-    # Add diagram generation step
-    builder.add_edge("process_content", "generate_diagram")
+    # Diagram generation path
+    builder.add_conditional_edges(
+        "route_diagram",
+        determine_diagram_node,
+        {
+            "diagram": "generate_diagram",
+            "process": "process_content"
+        }
+    )
     
-    # Clean up after processing
+    # Connect diagram generation to cleanup
     builder.add_edge("generate_diagram", "cleanup_resources")
+    
+    # Connect content processing to cleanup
+    builder.add_edge("process_content", "cleanup_resources")
     
     # End after cleanup
     builder.add_edge("cleanup_resources", END)
@@ -143,6 +163,7 @@ async def analyze_repository(
             "messages": [],  # LLM interaction message history
             "paths_to_clean": [],  # Paths to clean up
             "should_generate_patterns": False,  # Routing flag
+            "should_generate_diagram": request.enable_diagram,  # Diagram generation flag
             "local_path": str(Path(TMP_BASE_PATH) / str(uuid.uuid4()) / os.path.basename(request.url.rstrip('/')).replace('.git', '')),
             "repo_name": os.path.basename(request.url.rstrip('/')).replace('.git', ''),
             "model": model,  # Add initialized model to state

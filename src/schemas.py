@@ -49,6 +49,10 @@ class RepoRequest(BaseModel):
         default=None,
         description="Natural language query for generating file patterns"
     )
+    enable_diagram: Optional[bool] = Field(
+        default=True,
+        description="Whether to generate system design diagram"
+    )
 
 class PatternGeneratorResult(BaseModel):
     """Result schema for pattern generation.
@@ -153,6 +157,7 @@ class State(TypedDict):
     
     # Process control
     should_generate_patterns: bool  # Whether to generate patterns using LLM
+    should_generate_diagram: bool  # Whether to generate system design diagram
     
     # Scan results
     scan_result: Optional[Dict[str, Any]]  # Results from repository scan
