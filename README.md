@@ -1,4 +1,4 @@
-# Repo2Prompt
+# GitSeek
 
 🔍 A backend service that helps you find the exact code you need from any Git repository using natural language queries, transforms the filtered content into prompt-friendly format for LLMs, and generates system architecture diagrams automatically.
 
@@ -120,8 +120,8 @@ Request body:
 
 1. Clone the repository
 ```bash
-git clone https://github.com/yourusername/repo2prompt.git
-cd repo2prompt
+git clone https://github.com/yourusername/gitseek.git
+cd gitseek
 ```
 
 2. Install development dependencies

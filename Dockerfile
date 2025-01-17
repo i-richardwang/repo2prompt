@@ -20,9 +20,11 @@ FROM python:3.12-slim
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
 
-# Install git and clean up
+# Install git, curl and clean up
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends git \
+    && apt-get install -y --no-install-recommends \
+       git \
+       curl \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -32,15 +34,19 @@ RUN useradd -m -u 1000 appuser
 
 # Copy Python packages and application code
 COPY --from=builder /usr/local/lib/python3.12/site-packages/ /usr/local/lib/python3.12/site-packages/
-COPY src/ ./
+COPY --from=builder /usr/local/bin/ /usr/local/bin/
+COPY . .
 
-# Change ownership of the application files
-RUN chown -R appuser:appuser /app
+# Create tmp directory and set permissions
+RUN mkdir -p /app/tmp \
+    && chown -R appuser:appuser /app \
+    && chmod -R 755 /app \
+    && chmod 777 /app/tmp
 
 # Switch to non-root user
 USER appuser
 
-EXPOSE 8000
+EXPOSE 8007
 
-# Use the correct module path
-CMD ["python", "-m", "uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Start the FastAPI application
+CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8007", "--app-dir", "/app"]

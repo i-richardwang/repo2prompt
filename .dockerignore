@@ -1,6 +1,7 @@
 # Git
 .git
 .gitignore
+.gitattributes
 
 # Python
 __pycache__
@@ -8,14 +9,10 @@ __pycache__
 *.pyo
 *.pyd
 .Python
-env
-pip-log.txt
-pip-delete-this-directory.txt
-.tox
+.pytest_cache
 .coverage
 .coverage.*
 .cache
-nosetests.xml
 coverage.xml
 *.cover
 *.log
@@ -33,9 +30,13 @@ ENV
 *.swo
 
 # Project specific
-docs/
 tests/
 *.md
+!README.md
 LICENSE
-pytest.ini
-setup.py
+tmp/
+.langchain.db
+
+# Docker
+.dockerignore
+Dockerfile
